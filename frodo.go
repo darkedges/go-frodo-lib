@@ -565,7 +565,7 @@ func (frodo Frodo) getUserSessionToken(handler func(map[string]interface{})) Use
 
 func (frodo Frodo) CallbackHandler() func(map[string]interface{}) {
 	return func(map[string]interface{}) {
-		fmt.Println("CallbackHandler")
+		//fmt.Println("CallbackHandler")
 	}
 }
 
@@ -587,7 +587,7 @@ func (frodo Frodo) OTPCallbackHandler() func(map[string]interface{}) map[string]
 		if err != nil {
 			panic(err)
 		}
-		o := callback["callbacks"].([]interface{})[1]
+		o := callback["callbacks"].([]interface{})[0]
 		p := o.(map[string]interface{})["input"].([]interface{})[0]
 		p.(map[string]interface{})["value"] = passcode
 		return callback
@@ -660,7 +660,6 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 				OTPCallbackHandler: frodo.OTPCallbackHandler(),
 			},
 		)
-
 		// throw exception if 2fa required but Factor not Supported by frodo (e.g. WebAuthN)
 		if !skip2FA.Supported {
 			panic(fmt.Sprintf("Unsupported 2FA Factor: %s", skip2FA.Factor))
@@ -678,7 +677,6 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 				},
 			)
 		}
-
 		sessionInfo := SessionInfoType{}
 		if response["tokenId"] != "" {
 			response["from_cache"] = false
@@ -688,20 +686,20 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 					tokenId: response["tokenId"].(string),
 				},
 			)
+			response["expires"] = sessionInfo.MaxIdleExpirationTime
+			frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getFreshUserSessionToken: end [tokenId=%s]", response["tokenId"]))
+			frodo.DebugMessage(fmt.Sprintf("%s", response))
+			return UserSessionMetaType{
+				tokenId:    response["tokenId"].(string),
+				successUrl: response["successUrl"].(string),
+				realm:      response["realm"].(string),
+				expires:    response["expires"].(time.Time),
+				from_cache: response["from_cache"].(bool),
+			}
 		}
-		response["expires"] = sessionInfo.MaxIdleExpirationTime
-		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getFreshUserSessionToken: end [tokenId=%s]", response["tokenId"]))
-		frodo.DebugMessage(fmt.Sprintf("%s", response))
 	}
-	return UserSessionMetaType{
-		tokenId:    response["tokenId"].(string),
-		successUrl: response["successUrl"].(string),
-		realm:      response["realm"].(string),
-		expires:    response["expires"].(time.Time),
-		from_cache: response["from_cache"].(bool),
-	}
-	//frodo.DebugMessage("AuthenticateOps.getFreshUserSessionToken: end [no session]")
-	//return UserSessionMetaType{}
+	frodo.DebugMessage("AuthenticateOps.getFreshUserSessionToken: end [no session]")
+	return UserSessionMetaType{}
 }
 
 func (frodo Frodo) saveUserSessionToken(token UserSessionMetaType) {
@@ -719,7 +717,7 @@ func (frodo Frodo) Step(config StepConfig) (map[string]interface{}, error) {
 	}
 	var data = frodo.generateAmApi(HTTPRequestParams{
 		resource: map[string]string{
-			"apiVersion": constants.ServerInfoApiVersion,
+			"apiVersion": constants.ApiVersion,
 		},
 		requestOverride: map[string]string{},
 		url:             urlString,

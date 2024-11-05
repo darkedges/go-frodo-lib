@@ -9,6 +9,7 @@ const CLASSIC_DEPLOYMENT_TYPE_KEY = "classic"
 const CLOUD_DEPLOYMENT_TYPE_KEY = "cloud"
 const FORGEOPS_DEPLOYMENT_TYPE_KEY = "forgeops"
 const ServerInfoApiVersion = "resource=1.1"
+const ApiVersion = "resource=2.0, protocol=1.0"
 
 var DEPLOYMENT_TYPES = []string{
 	CLASSIC_DEPLOYMENT_TYPE_KEY,
