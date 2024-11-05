@@ -635,14 +635,14 @@ type CheckAndHandle2FAParams struct {
 func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) UserSessionMetaType {
 	frodo.DebugMessage("AuthenticateOps.getFreshUserSessionToken: start")
 	state := frodo.State
-	config := StepConfig{
-		body: "{}",
-		headers: http.Header{
-			"X-OpenAM-Username": {state.Username},
-			"X-OpenAM-Password": {state.Password},
-		},
-	}
-	response, err := frodo.Step(config)
+	response, err := frodo.Step(
+		StepConfig{
+			body: "{}",
+			headers: http.Header{
+				"X-OpenAM-Username": {state.Username},
+				"X-OpenAM-Password": {state.Password},
+			},
+		})
 	if err != nil {
 		panic(err)
 	}
@@ -651,7 +651,7 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 		NextStep: true,
 	}
 	var steps = 0
-	maxSteps := 3
+	maxSteps := 1
 	for ok := true; ok; ok = skip2FA.NextStep && steps < maxSteps {
 		skip2FA = frodo.checkAndHandle2FA(
 			CheckAndHandle2FAParams{
@@ -659,18 +659,25 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 				OTPCallbackHandler: frodo.OTPCallbackHandler(),
 			},
 		)
-		steps++
-		//
-		//	// throw exception if 2fa required but Factor not Supported by frodo (e.g. WebAuthN)
-		//	if (!skip2FA.Supported) {
-		//	throw new Error(`Unsupported 2FA Factor: ${skip2FA.Factor}`);
-		//}
-		//
-		//	if (skip2FA.NextStep) {
-		//	steps++;
-		//	response = await step({ body: skip2FA.payload, state });
-		//}
-		//
+
+		// throw exception if 2fa required but Factor not Supported by frodo (e.g. WebAuthN)
+		if !skip2FA.Supported {
+			panic(fmt.Sprintf("Unsupported 2FA Factor: %s", skip2FA.Factor))
+		}
+
+		if skip2FA.NextStep {
+			steps++
+			jsonBody, err := json.Marshal(skip2FA.Payload)
+			if err {
+				panic(err.Error())
+			}
+			response, err = frodo.Step(
+				StepConfig{
+					body: string(jsonBody),
+				},
+			)
+		}
+
 		sessionInfo := SessionInfoType{}
 		if response["tokenId"] != "" {
 			response["from_cache"] = false
@@ -684,8 +691,6 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 		response["expires"] = sessionInfo.MaxIdleExpirationTime
 		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getFreshUserSessionToken: end [tokenId=%s]", response["tokenId"]))
 		frodo.DebugMessage(fmt.Sprintf("%s", response))
-		////}
-		//} while (skip2FA.NextStep && steps < maxSteps);
 	}
 	return UserSessionMetaType{
 		tokenId:    response["tokenId"].(string),
@@ -1385,13 +1390,13 @@ func (frodo Frodo) checkAndHandle2FA(params CheckAndHandle2FAParams) CallbackHan
 					}
 					callback = params.OTPCallbackHandler(params.payload)
 					frodo.DebugMessage("AuthenticateOps.checkAndHandle2FA: end [need2fa=true, skippable=false, Factor=Code]")
-					//		//return CallbackHandlerResponse{
-					//		//			NextStep:  true,
-					//		//			Need2FA:   true,
-					//		//			Factor:    "Code",
-					//		//			Supported: true,
-					//		//			Payload:   payload,
-					//		//		}
+					return CallbackHandlerResponse{
+						NextStep:  true,
+						Need2FA:   true,
+						Factor:    "Code",
+						Supported: true,
+						Payload:   payload,
+					}
 				} else {
 					p := callback.(map[string]interface{})["input"].([]interface{})[0]
 					p.(map[string]interface{})["value"] = state.Username
