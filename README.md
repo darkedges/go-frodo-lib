@@ -36,6 +36,40 @@ func main() {
 
 ```
 
+## Admin Account with OTP
+
+```go
+package main
+
+import (
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"github.com/darkedges/go-frodo-lib"
+	"net/http"
+)
+
+func main() {
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	params := frodo.Params{}
+	//// Service Account Login
+	params.Host = ""
+	params.User = ""
+	params.Pass = ""
+	params.OTPSecret = ""
+	myfrodo, _ := frodo.CreateInstanceWithAdminAccountTOTP(params)
+	myfrodo.Login()
+	info := myfrodo.GetInfo()
+	// Dump Details
+	fmt.Printf("newFactoryHelperServiceAccountLogin: Logged in to: %s\n", info.Host)
+	fmt.Printf("newFactoryHelperServiceAccountLogin: Logged in as: %s\n", info.AuthenticatedSubject)
+	fmt.Printf("newFactoryHelperServiceAccountLogin: Using bearer token: \n%s\n", info.BearerToken)
+	jcart, _ := json.MarshalIndent(info, "", "  ")
+	fmt.Println(string(jcart))
+}
+
+```
+
 ## Service Account Login
 
 ```go

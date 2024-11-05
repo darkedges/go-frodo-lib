@@ -1,4 +1,4 @@
-package frodo
+package main
 
 import (
 	"testing"
@@ -11,16 +11,16 @@ var host1 = "https://instance1/am"
 var host2 = "https://instance2/am"
 
 func TestCreateInstanceWithAdminAccount(t *testing.T) {
-	params1 := Params{}
+	params1 := main.Params{}
 	params1.Host = "https://instance1/am"
 	params1.User = "admin1"
 	params1.Pass = "password1"
-	instance1, _ := CreateInstanceWithAdminAccount(params1)
-	params2 := Params{}
+	instance1, _ := main.CreateInstanceWithAdminAccount(params1)
+	params2 := main.Params{}
 	params2.Host = "https://instance2/am"
 	params2.User = "admin2"
 	params2.Pass = "password2"
-	instance2, _ := CreateInstanceWithAdminAccount(params2)
+	instance2, _ := main.CreateInstanceWithAdminAccount(params2)
 	Expect(host1).To.Equal(host1)
 	Expect(instance1.state().Host).To.Equal(host1)
 	Expect(instance1.state().Username).To.Equal("admin1")
