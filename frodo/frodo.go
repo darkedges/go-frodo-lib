@@ -652,7 +652,7 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 		NextStep: true,
 	}
 	var steps = 0
-	maxSteps := 1
+	maxSteps := 3
 	for ok := true; ok; ok = skip2FA.NextStep && steps < maxSteps {
 		skip2FA = frodo.checkAndHandle2FA(
 			CheckAndHandle2FAParams{
@@ -678,7 +678,7 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 			)
 		}
 		sessionInfo := SessionInfoType{}
-		if response["tokenId"] != "" {
+		if response["tokenId"] != nil {
 			response["from_cache"] = false
 			// get session expiration
 			sessionInfo = frodo.getSessionInfo(
