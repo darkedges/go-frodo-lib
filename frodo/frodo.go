@@ -231,16 +231,6 @@ type GetTokenParams struct {
 	State            State
 }
 
-func loadConnectionProfile(state State) bool {
-	return false
-}
-func getConnectionProfile(state State) bool {
-	return false
-}
-func determineCookieName(state State) bool {
-	return false
-}
-
 type SaveConnectionProfileParams struct {
 	host string
 }
@@ -861,10 +851,14 @@ func (frodo Frodo) determineDeploymentType() string {
 		})
 		client := &http.Client{
 			Timeout: time.Second * 10,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
 		}
 		resp, _ := client.Do(&data)
 		if resp.StatusCode == 302 && strings.Index(resp.Header.Get("Location"), "code=") > -1 {
 			frodo.VerboseMessage("ForgeRock Identity Cloud deployment detected.")
+			deploymentType = constants.CLOUD_DEPLOYMENT_TYPE_KEY
 		} else {
 			bodyFormData = fmt.Sprintf("redirect_uri=%s&scope=%s&response_type=code&client_id=%s&csrf=%s&decision=allow&code_challenge=%s&code_challenge_method=%s", url.QueryEscape(redirectUri.String()), url.QueryEscape(constants.ForgeopsAdminScopes), url.QueryEscape(forgeopsClientId), url.QueryEscape(cookieValue), url.QueryEscape(challenge), url.QueryEscape(challengeMethod))
 			var data = frodo.authorize(HTTPRequestParams{
@@ -876,12 +870,6 @@ func (frodo Frodo) determineDeploymentType() string {
 				},
 				method: http.MethodPost,
 			})
-			client := &http.Client{
-				Timeout: time.Second * 10,
-				CheckRedirect: func(req *http.Request, via []*http.Request) error {
-					return http.ErrUseLastResponse
-				},
-			}
 			resp, _ := client.Do(&data)
 			if resp.StatusCode == 302 && strings.Index(resp.Header.Get("Location"), "code=") > -1 {
 				adminClientId := state.AdminClientId
