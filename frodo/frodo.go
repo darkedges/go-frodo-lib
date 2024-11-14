@@ -47,6 +47,7 @@ type ImFrodo interface {
 	Login()
 	GetInfo() PlatformInfo
 	state() State
+	GetServiceAccount(ServiceAccountParams) ServiceAccountType
 }
 
 type State struct {
@@ -808,14 +809,14 @@ func (frodo Frodo) determineDeploymentType() string {
 	switch deploymentType {
 
 	case constants.CLOUD_DEPLOYMENT_TYPE_KEY:
-		adminClientId := state.AdminClientId
+		adminClientId = state.AdminClientId
 		if adminClientId == "" {
 			adminClientId = fidcClientId
 		}
 		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentType: end [type=%s]", deploymentType))
 		return deploymentType
 	case constants.FORGEOPS_DEPLOYMENT_TYPE_KEY:
-		adminClientId := state.AdminClientId
+		adminClientId = state.AdminClientId
 		if adminClientId == "" {
 			adminClientId = forgeopsClientId
 		}
@@ -872,7 +873,7 @@ func (frodo Frodo) determineDeploymentType() string {
 			})
 			resp, _ := client.Do(&data)
 			if resp.StatusCode == 302 && strings.Index(resp.Header.Get("Location"), "code=") > -1 {
-				adminClientId := state.AdminClientId
+				adminClientId = state.AdminClientId
 				if adminClientId == "" {
 					adminClientId = forgeopsClientId
 				}
@@ -958,15 +959,15 @@ func (frodo Frodo) getAmVersion() string {
 }
 
 type ServiceAccountParams struct {
-	serviceAccountId string
+	ServiceAccountId string
 }
 
 func (frodo Frodo) getAuthenticatedSubject() string {
 	state := frodo.State
 	var subjectString = fmt.Sprintf("%s (User)", state.Username)
 	if state.UseBearerTokenForAmApis {
-		serviceAccount := frodo.getServiceAccount(ServiceAccountParams{
-			serviceAccountId: state.ServiceAccountId,
+		serviceAccount := frodo.GetServiceAccount(ServiceAccountParams{
+			ServiceAccountId: state.ServiceAccountId,
 		})
 		subjectString = fmt.Sprintf("%s[%s] (Service Account)", serviceAccount.Name, state.ServiceAccountId)
 	}
@@ -993,15 +994,15 @@ type ManagedObjectParams struct {
 	Fields []string
 }
 
-func (frodo Frodo) getServiceAccount(params ServiceAccountParams) ServiceAccountType {
-	frodo.DebugMessage("ServiceAccountOps.getServiceAccount: start")
+func (frodo Frodo) GetServiceAccount(params ServiceAccountParams) ServiceAccountType {
+	frodo.DebugMessage("ServiceAccountOps.GetServiceAccount: start")
 	serviceAccount := frodo.getManagedObject(ManagedObjectParams{
 		Type:   constants.MOType,
-		Id:     params.serviceAccountId,
+		Id:     params.ServiceAccountId,
 		Fields: []string{"*"},
 	})
 	frodo.DebugMessage(fmt.Sprintf("%+v", serviceAccount))
-	frodo.DebugMessage("ServiceAccountOps.getServiceAccount: end")
+	frodo.DebugMessage("ServiceAccountOps.GetServiceAccount: end")
 	return serviceAccount
 }
 
@@ -1263,6 +1264,7 @@ func (frodo Frodo) getManagedObject(params ManagedObjectParams) ServiceAccountTy
 	fieldsParam := "_fields=" + strings.Join(params.Fields, ",")
 
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate+"?%s", frodo.getIdmBaseUrl(), params.Type, params.Id, fieldsParam)
+	fmt.Println(urlString)
 	data := frodo.generateIdmApi(HTTPRequestParams{
 		resource:        map[string]string{},
 		requestOverride: map[string]string{},
