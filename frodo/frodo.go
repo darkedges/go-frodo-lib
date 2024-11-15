@@ -30,6 +30,7 @@ var forceLoginAsUser = false
 var fidcClientId = "idmAdminClient"
 var forgeopsClientId = "idm-admin-ui"
 var adminClientId = fidcClientId
+var adminClientPassword = "doesnotmatter"
 
 type Params struct {
 	Host, User, Pass        string
@@ -873,7 +874,7 @@ func (frodo Frodo) getSemanticVersion(versionInfo ServerVersionInfoType) (string
 
 func (frodo Frodo) determineDefaultRealm() {
 	state := frodo.State
-	if state.getRealm() == "" {
+	if state.getRealm() != "" {
 		state.setRealm(constants.DeploymentTypeRealmMap[state.getDeploymentType()])
 	}
 }
@@ -964,7 +965,7 @@ func (frodo Frodo) authorize(params HTTPRequestParams) http.Request {
 }
 
 func (frodo Frodo) accessToken(params HTTPRequestParams) http.Request {
-	urlString := fmt.Sprintf(constants.AccessTokenUrlTemplate, params.url, "")
+	urlString := fmt.Sprintf(constants.AccessTokenUrlTemplate, params.url, frodo.getCurrentRealmPath())
 	params.url = urlString
 	return frodo.generateOauth2Api(params)
 }
@@ -1467,7 +1468,11 @@ func (frodo Frodo) getFreshUserBearerToken() AccessTokenMetaType {
 	redirectUri.Path = state.getAdminClientRedirectUri()
 	authCode := frodo.getAuthCode(redirectUri.String(), challenge, challengeMethod)
 	bodyFormData := url.Values{}
+	headers := http.Header{
+		"Content-Type": {"application/x-www-form-urlencoded"},
+	}
 	if state.getDeploymentType() == constants.CloudDeploymentTypeKey {
+		headers.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(adminClientId+":"+adminClientPassword)))
 		bodyFormData.Set("redirect_uri", redirectUri.String())
 		bodyFormData.Set("grant_type", "authorization_code")
 		bodyFormData.Set("code", authCode)
@@ -1480,12 +1485,10 @@ func (frodo Frodo) getFreshUserBearerToken() AccessTokenMetaType {
 		bodyFormData.Set("code_verifier", encodedVerifier)
 	}
 	var data = frodo.accessToken(HTTPRequestParams{
-		url:  state.getHost(),
-		body: bodyFormData.Encode(),
-		headers: http.Header{
-			"Content-Type": {"application/x-www-form-urlencoded"},
-		},
-		method: http.MethodPost,
+		url:     state.getHost(),
+		body:    bodyFormData.Encode(),
+		headers: headers,
+		method:  http.MethodPost,
 	})
 	client := &http.Client{
 		Timeout: time.Second * 10,
