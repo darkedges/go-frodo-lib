@@ -4,23 +4,22 @@ import (
 	"strings"
 )
 
-const DEFAULT_REALM_KEY = "__default__realm__"
-const CLASSIC_DEPLOYMENT_TYPE_KEY = "classic"
-const CLOUD_DEPLOYMENT_TYPE_KEY = "cloud"
-const FORGEOPS_DEPLOYMENT_TYPE_KEY = "forgeops"
+const ClassicDeploymentTypeKey = "classic"
+const CloudDeploymentTypeKey = "cloud"
+const ForgeopsDeploymentTypeKey = "forgeops"
 const ServerInfoApiVersion = "resource=1.1"
 const ApiVersion = "resource=2.0, protocol=1.0"
 
-var DEPLOYMENT_TYPES = []string{
-	CLASSIC_DEPLOYMENT_TYPE_KEY,
-	CLOUD_DEPLOYMENT_TYPE_KEY,
-	FORGEOPS_DEPLOYMENT_TYPE_KEY,
+var DeploymentTypes = []string{
+	ClassicDeploymentTypeKey,
+	CloudDeploymentTypeKey,
+	ForgeopsDeploymentTypeKey,
 }
 
-var DEPLOYMENT_TYPE_REALM_MAP = map[string]string{
-	CLASSIC_DEPLOYMENT_TYPE_KEY:  "/",
-	CLOUD_DEPLOYMENT_TYPE_KEY:    "alpha",
-	FORGEOPS_DEPLOYMENT_TYPE_KEY: "/",
+var DeploymentTypeRealmMap = map[string]string{
+	ClassicDeploymentTypeKey:  "/",
+	CloudDeploymentTypeKey:    "alpha",
+	ForgeopsDeploymentTypeKey: "/",
 }
 
 const AuthenticateUrlTemplate = "%s/json%s/authenticate"
@@ -94,7 +93,7 @@ var s = struct {
 	FederationEnforcementFullScope: "fr:idc:federation:*",
 }
 
-var CLOUD_ADMIN_DEFAULT_SCOPES = []string{
+var CloudAdminDefaultScopes = []string{
 	s.AnalyticsFullScope,
 	s.AutoAccessFullScope,
 	s.CertificateFullScope,
@@ -111,12 +110,12 @@ var CLOUD_ADMIN_DEFAULT_SCOPES = []string{
 	s.SSOCookieFullScope,
 	s.WafFullScope,
 }
-var FORGEOPS_ADMIN_DEFAULT_SCOPES = []string{
+var ForgeopsAdminDefaultScopes = []string{
 	s.IdmFullScope,
 	s.OpenIdScope,
 }
 
-var SERVICE_ACCOUNT_DEFAULT_SCOPES = []string{
+var ServiceAccountDefaultScopes = []string{
 	s.AmFullScope,
 	s.AnalyticsFullScope,
 	s.AutoAccessFullScope,
@@ -132,8 +131,8 @@ var SERVICE_ACCOUNT_DEFAULT_SCOPES = []string{
 	s.SSOCookieFullScope,
 	s.WafFullScope,
 }
-var CloudAdminScopes = strings.Join(CLOUD_ADMIN_DEFAULT_SCOPES, " ")
-var ForgeopsAdminScopes = strings.Join(FORGEOPS_ADMIN_DEFAULT_SCOPES, " ")
-var ServiceAccountDefaultScopes = strings.Join(SERVICE_ACCOUNT_DEFAULT_SCOPES, " ")
+var CloudAdminScopes = strings.Join(CloudAdminDefaultScopes, " ")
+var ForgeopsAdminScopes = strings.Join(ForgeopsAdminDefaultScopes, " ")
+var ServiceAccountScopes = strings.Join(ServiceAccountDefaultScopes, " ")
 
 var MOType = "svcacct"

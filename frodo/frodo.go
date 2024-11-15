@@ -50,34 +50,6 @@ type ImFrodo interface {
 	GetServiceAccount(ServiceAccountParams) ServiceAccountType
 }
 
-type State struct {
-	Host     string
-	Username string
-	Password string
-	Realm    string
-
-	ServiceAccountId              string
-	ServiceAccountJwk             string
-	DeploymentType                string
-	IdmHost                       string
-	AdminClientId                 string
-	AdminClientRedirectUri        string
-	AuthenticationService         string
-	AllowInsecureConnection       string
-	AuthenticationHeaderOverrides string
-	ServiceAccountScope           string
-	CookieName                    string
-	UseBearerTokenForAmApis       bool
-	BearerToken                   AccessTokenMetaType
-	getUseBearerTokenForAmApis    bool
-	UseTokenCache                 bool
-	UserSessionTokenMeta          UserSessionMetaType
-	AmVersion                     interface{}
-	BearerTokenMeta               AccessTokenMetaType
-	IDMHost                       string
-	OTPSecret                     string
-}
-
 type PlatformInfo struct {
 	AmVersion            string
 	Host                 string
@@ -91,10 +63,6 @@ type PlatformInfo struct {
 
 type Frodo struct {
 	State *State
-}
-
-func (frodo Frodo) getUserBearerToken() AccessTokenMetaType {
-	return frodo.State.BearerToken
 }
 
 func (frodo Frodo) state() State {
@@ -111,17 +79,17 @@ func (frodo Frodo) Login() {
 func (frodo Frodo) GetInfo() PlatformInfo {
 	state := frodo.State
 	info := PlatformInfo{
-		Host:                 state.Host,
+		Host:                 state.getHost(),
 		AmVersion:            frodo.getAmVersion(),
 		AuthenticatedSubject: frodo.getAuthenticatedSubject(),
-		DeploymentType:       state.DeploymentType,
+		DeploymentType:       state.getDeploymentType(),
 		CookieName:           state.CookieName,
 		SessionToken:         state.getCookieValue(),
 	}
-	if state.BearerToken != (AccessTokenMetaType{}) {
-		info.BearerToken = state.BearerToken.AccessToken
+	if state.getBearerToken() != (AccessTokenMetaType{}) {
+		info.BearerToken = state.getBearerToken().AccessToken
 	}
-	if state.DeploymentType == constants.CLOUD_DEPLOYMENT_TYPE_KEY {
+	if state.getDeploymentType() == constants.CloudDeploymentTypeKey {
 		info.CloudInfo = frodo.getCloudInfo()
 	}
 	return info
@@ -130,10 +98,10 @@ func (frodo Frodo) GetInfo() PlatformInfo {
 func CreateInstanceWithAdminAccount(p Params) (ImFrodo, error) {
 	instance := Frodo{
 		State: &State{
-			Host:     p.Host,
-			Username: p.User,
-			Password: p.Pass,
-			Realm:    p.Realm,
+			host:     p.Host,
+			username: p.User,
+			password: p.Pass,
+			realm:    p.Realm,
 		},
 	}
 	return instance, nil
@@ -142,10 +110,10 @@ func CreateInstanceWithAdminAccount(p Params) (ImFrodo, error) {
 func CreateInstanceWithAdminAccountTOTP(p Params) (ImFrodo, error) {
 	instance := Frodo{
 		State: &State{
-			Host:      p.Host,
-			Username:  p.User,
-			Password:  p.Pass,
-			Realm:     p.Realm,
+			host:      p.Host,
+			username:  p.User,
+			password:  p.Pass,
+			realm:     p.Realm,
 			OTPSecret: p.OTPSecret,
 		},
 	}
@@ -155,10 +123,10 @@ func CreateInstanceWithAdminAccountTOTP(p Params) (ImFrodo, error) {
 func CreateInstanceWithServiceAccount(p Params) (ImFrodo, error) {
 	instance := Frodo{
 		State: &State{
-			Host:              p.Host,
-			ServiceAccountId:  p.ServiceAccountId,
-			ServiceAccountJwk: p.ServiceAccountJwk,
-			Realm:             p.Realm,
+			host:              p.Host,
+			serviceAccountId:  p.ServiceAccountId,
+			serviceAccountJwk: p.ServiceAccountJwk,
+			realm:             p.Realm,
 		},
 	}
 	return instance, nil
@@ -174,40 +142,6 @@ func (state State) VerboseHandler() func(string) {
 	return func(message string) {
 		//fmt.Println(message)
 	}
-}
-
-func (state State) HasUserSessionToken() bool {
-	return true
-}
-
-func (state State) getAuthenticationService() string {
-	// || process.env.FRODO_AUTHENTICATION_SERVICE
-	return state.AuthenticationService
-}
-
-func (state State) getCookieValue() string {
-	return state.UserSessionTokenMeta.tokenId
-}
-
-func (state State) setBearerTokenMeta(token AccessTokenMetaType) {
-	state.BearerToken = token
-}
-
-func (state State) getCurrentRealmPath() string {
-	return getRealmPath(state.Realm)
-}
-
-func (state State) getUseTokenCache() bool {
-	// todo process.env.FRODO_NO_CACHE
-	return state.UseTokenCache
-}
-
-func (state State) getIdmHost() string {
-	//todo || process.env.FRODO_IDM_HOST
-	//if idmHost := state.getIdmHost(); idmHost != "" {
-	//		return process.env.FRODO_IDM_HOST
-	//	}
-	return state.IDMHost
 }
 
 func (frodo Frodo) DebugMessage(message string) {
@@ -248,87 +182,87 @@ func (frodo Frodo) GetTokens() Tokens {
 	state := frodo.State
 	usingConnectionProfile := false
 	// todo
-	//if state.Username == "" && state.Password == "" && state.ServiceAccountId != "" && state.ServiceAccountJwk != "" {
-	//	usingConnectionProfile = frodo.loadConnectionProfile()
-	//	if state.DeploymentType != "" && !slices.Contains(constants.DEPLOYMENT_TYPES, state.DeploymentType) {
-	//		errorString := fmt.Sprintf("Unsupported deployment type: %s", state.DeploymentType)
-	//		panic(errorString)
-	//	}
-	//}
-	if !isValidUrl(state.Host) {
+	if state.getUsername() == "" && state.getPassword() == "" && state.getServiceAccountId() != "" && state.getServiceAccountJwk() != "" {
+		usingConnectionProfile = frodo.loadConnectionProfile()
+		if state.getDeploymentType() != "" && !slices.Contains(constants.DeploymentTypes, state.getDeploymentType()) {
+			errorString := fmt.Sprintf("Unsupported deployment type: %s", state.getDeploymentType())
+			panic(errorString)
+		}
+	}
+	if !isValidUrl(state.getHost()) {
 		conn, _ := frodo.getConnectionProfile()
-		state.Host = conn.tenant
+		state.setHost(conn.tenant)
 		state.AllowInsecureConnection = conn.allowInsecureConnection
-		state.DeploymentType = conn.deploymentType
+		state.setDeploymentType(conn.deploymentType)
 
 		// fail fast if deployment type not applicable
-		if state.DeploymentType != "" && !slices.Contains(constants.DEPLOYMENT_TYPES, state.DeploymentType) {
-			errorString := fmt.Sprintf("Unsupported deployment type: %s", state.DeploymentType)
+		if state.getDeploymentType() != "" && !slices.Contains(constants.DeploymentTypes, state.getDeploymentType()) {
+			errorString := fmt.Sprintf("Unsupported deployment type: %s", state.getDeploymentType())
 			panic(errorString)
 		}
 	}
 	state.CookieName = frodo.determineCookieName()
 	// use service account to login?
-	if !forceLoginAsUser && (state.DeploymentType == constants.CLOUD_DEPLOYMENT_TYPE_KEY || state.DeploymentType == "") && state.ServiceAccountId != "" && state.ServiceAccountJwk != "" {
-		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getTokens: Authenticating with service account %s", state.ServiceAccountId))
+	if !forceLoginAsUser && (state.getDeploymentType() == constants.CloudDeploymentTypeKey || state.getDeploymentType() == "") && state.getServiceAccountId() != "" && state.getServiceAccountJwk() != "" {
+		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getTokens: Authenticating with service account %s", state.getServiceAccountId()))
 		//try {
 		token, err := frodo.getSaBearerToken()
 		if err != nil {
 		}
 		if token != (AccessTokenMetaType{}) {
-			state.BearerToken = token
+			state.setBearerToken(token)
 		}
 
 		if usingConnectionProfile && !token.from_cache {
-			frodo.saveConnectionProfile(SaveConnectionProfileParams{host: state.Host})
+			frodo.saveConnectionProfile(SaveConnectionProfileParams{host: state.getHost()})
 		}
-		state.UseBearerTokenForAmApis = true
+		state.setUseBearerTokenForAmApis(true)
 		frodo.determineDeploymentTypeAndDefaultRealmAndVersion()
-		if state.DeploymentType != "" && !slices.Contains(constants.DEPLOYMENT_TYPES, state.DeploymentType) {
-			panic(fmt.Sprintf("Unsupported deployment type '%s'", state.DeploymentType))
+		if state.getDeploymentType() != "" && !slices.Contains(constants.DeploymentTypes, state.getDeploymentType()) {
+			panic(fmt.Sprintf("Unsupported deployment type '%s'", state.getDeploymentType()))
 		}
-	} else if state.Username != "" && state.Password != "" {
-		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getTokens: Authenticating with user account %s", state.Username))
+	} else if state.getUsername() != "" && state.getPassword() != "" {
+		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getTokens: Authenticating with user account %s", state.getUsername()))
 		token := frodo.getUserSessionToken(frodo.CallbackHandler())
 		if token.tokenId != "" {
-			state.UserSessionTokenMeta = token
+			state.userSessionToken = token
 		}
 
 		if usingConnectionProfile && !token.from_cache {
-			frodo.saveConnectionProfile(SaveConnectionProfileParams{host: state.Host})
+			frodo.saveConnectionProfile(SaveConnectionProfileParams{host: state.getHost()})
 		}
 		frodo.determineDeploymentTypeAndDefaultRealmAndVersion()
 		//
 		//// fail if deployment type not applicable
-		if state.DeploymentType != "" && !slices.Contains(constants.DEPLOYMENT_TYPES, state.DeploymentType) {
-			panic(fmt.Sprintf("Unsupported deployment type '%s'", state.DeploymentType))
+		if state.getDeploymentType() != "" && !slices.Contains(constants.DeploymentTypes, state.getDeploymentType()) {
+			panic(fmt.Sprintf("Unsupported deployment type '%s'", state.getDeploymentType()))
 		}
-		if state.getCookieValue() != "" && (state.DeploymentType == constants.CLOUD_DEPLOYMENT_TYPE_KEY || state.DeploymentType == constants.FORGEOPS_DEPLOYMENT_TYPE_KEY) {
+		if state.getCookieValue() != "" && (state.getDeploymentType() == constants.CloudDeploymentTypeKey || state.getDeploymentType() == constants.ForgeopsDeploymentTypeKey) {
 			accessToken := frodo.getUserBearerToken()
 			if accessToken != (AccessTokenMetaType{}) {
-				state.setBearerTokenMeta(accessToken)
+				state.setBearerToken(accessToken)
 			}
 		}
 	} else {
 		panic("Incomplete or no credentials")
 	}
-	if state.getCookieValue() != "" || (state.UseBearerTokenForAmApis && state.BearerToken.AccessToken != "") {
-		if state.BearerTokenMeta.from_cache {
+	if state.getCookieValue() != "" || (state.getUseBearerTokenForAmApis() && state.getBearerToken().AccessToken != "") {
+		if state.getBearerToken().from_cache {
 			frodo.VerboseMessage("Using cached bearer token.")
 		}
-		if state.UseBearerTokenForAmApis && state.UserSessionTokenMeta.from_cache {
+		if state.getUseBearerTokenForAmApis() && state.userSessionToken.from_cache {
 			frodo.VerboseMessage("Using cached session token.")
 		}
 	}
 	frodo.scheduleAutoRefresh(forceLoginAsUser, autoRefresh)
 	tokens := Tokens{
-		bearerToken:      state.BearerTokenMeta,
-		userSessionToken: state.UserSessionTokenMeta,
+		bearerToken:      state.getBearerToken(),
+		userSessionToken: state.userSessionToken,
 		subject:          frodo.getLoggedInSubject(),
-		host:             state.Host,
+		host:             state.getHost(),
 	}
-	if state.Realm != "" {
-		tokens.realm = state.Realm
+	if state.getRealm() != "" {
+		tokens.realm = state.getRealm()
 	} else {
 		tokens.realm = "root"
 	}
@@ -345,7 +279,7 @@ func isValidUrl(host string) bool {
 }
 
 func (frodo *Frodo) loadConnectionProfile() bool {
-	return frodo.loadConnectionProfileByHost(frodo.State.Host)
+	return frodo.loadConnectionProfileByHost(frodo.State.getHost())
 }
 
 func (frodo *Frodo) loadConnectionProfileByHost(host string) bool {
@@ -354,13 +288,13 @@ func (frodo *Frodo) loadConnectionProfileByHost(host string) bool {
 		return false
 	}
 	state := frodo.State
-	state.Host = conn.tenant
+	state.setHost(conn.tenant)
 	if state.IdmHost == "" {
 		state.IdmHost = conn.idmHost
 	}
 	state.AllowInsecureConnection = conn.allowInsecureConnection
-	if state.DeploymentType == "" {
-		state.DeploymentType = conn.deploymentType
+	if state.getDeploymentType() == "" {
+		state.setDeploymentType(conn.deploymentType)
 	}
 	if state.AdminClientId == "" {
 		state.AdminClientId = conn.adminClientId
@@ -368,12 +302,12 @@ func (frodo *Frodo) loadConnectionProfileByHost(host string) bool {
 	if state.AdminClientRedirectUri == "" {
 		state.AdminClientRedirectUri = conn.adminClientRedirectUri
 	}
-	state.Username = conn.username
-	state.Password = conn.password
-	state.AuthenticationService = conn.authenticationService
+	state.setUsername(conn.username)
+	state.setPassword(conn.password)
+	state.setAuthenticationService(conn.authenticationService)
 	state.AuthenticationHeaderOverrides = conn.authenticationHeaderOverrides
-	state.ServiceAccountId = conn.svcacctId
-	state.ServiceAccountJwk = conn.svcacctJwk
+	state.setServiceAccountId(conn.svcacctId)
+	state.setServiceAccountJwk(conn.svcacctJwk)
 	state.ServiceAccountScope = conn.svcacctScope
 	return true
 }
@@ -416,7 +350,7 @@ func (frodo *Frodo) getConnectionProfileByHost(host string) (ConnectionProfileIn
 }
 
 func (frodo Frodo) getConnectionProfile() (ConnectionProfileInterface, error) {
-	return frodo.getConnectionProfileByHost(frodo.State.Host)
+	return frodo.getConnectionProfileByHost(frodo.State.getHost())
 }
 
 func (frodo Frodo) determineCookieName() string {
@@ -439,7 +373,7 @@ type HTTPRequestParams struct {
 }
 
 func (frodo Frodo) getServerInfo() (map[string]interface{}, error) {
-	urlString := fmt.Sprintf(constants.ServerInfoUrlTemplate, frodo.State.Host, "*")
+	urlString := fmt.Sprintf(constants.ServerInfoUrlTemplate, frodo.State.getHost(), "*")
 	data := frodo.generateAmApi(HTTPRequestParams{
 		resource: map[string]string{
 			"apiVersion": constants.ServerInfoApiVersion,
@@ -485,8 +419,8 @@ func (frodo Frodo) generateIdmApi(params HTTPRequestParams) http.Request {
 		"X-ForgeRock-TransactionId": {fmt.Sprintf("frodo-%s", uuid.New().String())},
 		"Content-Type":              {"application/json"},
 	}
-	if state.UseBearerTokenForAmApis && state.BearerToken.AccessToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", state.BearerToken.AccessToken))
+	if state.getUseBearerTokenForAmApis() && state.getBearerToken().AccessToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", state.getBearerToken().AccessToken))
 	}
 	return req
 }
@@ -514,11 +448,11 @@ func (frodo Frodo) generateAmApi(params HTTPRequestParams) http.Request {
 	if params.resource["apiVersion"] != "" {
 		req.Header.Set("Accept-API-Version", params.resource["apiVersion"])
 	}
-	if !state.UseBearerTokenForAmApis && state.CookieName != "" && state.getCookieValue() != "" {
+	if !state.getUseBearerTokenForAmApis() && state.CookieName != "" && state.getCookieValue() != "" {
 		req.Header.Set(state.CookieName, state.getCookieValue())
 	}
-	if state.UseBearerTokenForAmApis && state.BearerToken.AccessToken != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", state.BearerToken.AccessToken))
+	if state.getUseBearerTokenForAmApis() && state.getBearerToken().AccessToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", state.getBearerToken().AccessToken))
 	}
 	for headerName, headerValue := range params.headers {
 		req.Header.Set(headerName, strings.Join(headerValue, ", "))
@@ -631,8 +565,8 @@ func (frodo Frodo) getFreshUserSessionToken(params FreshUserSessionTokenParams) 
 		StepConfig{
 			body: "{}",
 			headers: http.Header{
-				"X-OpenAM-Username": {state.Username},
-				"X-OpenAM-Password": {state.Password},
+				"X-OpenAM-Username": {state.getUsername()},
+				"X-OpenAM-Password": {state.getPassword()},
 			},
 		})
 	if err != nil {
@@ -702,9 +636,9 @@ func (frodo Frodo) Step(config StepConfig) (map[string]interface{}, error) {
 	state := frodo.State
 	var urlString string
 	if config.service != "" || state.getAuthenticationService() != "" {
-		urlString = fmt.Sprintf(constants.AuthenticateWithServiceUrlTemplate, state.Host, getRealmPath(config.realm), config.service)
+		urlString = fmt.Sprintf(constants.AuthenticateWithServiceUrlTemplate, state.getHost(), getRealmPath(config.realm), config.service)
 	} else {
-		urlString = fmt.Sprintf(constants.AuthenticateUrlTemplate, state.Host, getRealmPath(config.realm))
+		urlString = fmt.Sprintf(constants.AuthenticateUrlTemplate, state.getHost(), getRealmPath(config.realm))
 	}
 	var data = frodo.generateAmApi(HTTPRequestParams{
 		resource: map[string]string{
@@ -744,7 +678,7 @@ type SessionInfoType struct {
 
 func (frodo Frodo) getSessionInfo(i SessionInfoParams) SessionInfoType {
 	state := frodo.State
-	urlString := fmt.Sprintf(constants.SessionInfoURLTemplate, state.Host, frodo.getCurrentRealmPath())
+	urlString := fmt.Sprintf(constants.SessionInfoURLTemplate, state.getHost(), frodo.getCurrentRealmPath())
 	var data = frodo.generateAmApi(HTTPRequestParams{
 		resource: map[string]string{
 			"apiVersion": "resource=4.0",
@@ -769,7 +703,7 @@ func (frodo Frodo) getSessionInfo(i SessionInfoParams) SessionInfoType {
 }
 
 func (frodo Frodo) getCurrentRealmPath() string {
-	return getRealmPath(frodo.State.Realm)
+	return getRealmPath(frodo.State.getRealm())
 }
 
 func (frodo Frodo) saveConnectionProfile(params SaveConnectionProfileParams) {
@@ -779,9 +713,9 @@ func (frodo Frodo) saveConnectionProfile(params SaveConnectionProfileParams) {
 func (frodo Frodo) determineDeploymentTypeAndDefaultRealmAndVersion() {
 	state := frodo.State
 	frodo.DebugMessage("AuthenticateOps.determineDeploymentTypeAndDefaultRealmAndVersion: start")
-	state.DeploymentType = frodo.determineDeploymentType()
+	state.setDeploymentType(frodo.determineDeploymentType())
 	frodo.determineDefaultRealm()
-	frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentTypeAndDefaultRealmAndVersion: realm=%s, type=%s", state.Realm, state.DeploymentType))
+	frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentTypeAndDefaultRealmAndVersion: realm=%s, type=%s", state.getRealm(), state.getDeploymentType()))
 	versionInfo := frodo.getServerVersionInfo()
 	frodo.DebugMessage(fmt.Sprintf("Full version: %+v", versionInfo.FullVersion))
 	version, _ := frodo.getSemanticVersion(versionInfo)
@@ -805,31 +739,31 @@ func (frodo Frodo) determineDeploymentType() string {
 	frodo.DebugMessage("AuthenticateOps.determineDeploymentType: start")
 	state := frodo.State
 	cookieValue := state.getCookieValue()
-	deploymentType := state.DeploymentType
+	deploymentType := state.getDeploymentType()
 	switch deploymentType {
 
-	case constants.CLOUD_DEPLOYMENT_TYPE_KEY:
+	case constants.CloudDeploymentTypeKey:
 		adminClientId = state.AdminClientId
 		if adminClientId == "" {
 			adminClientId = fidcClientId
 		}
 		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentType: end [type=%s]", deploymentType))
 		return deploymentType
-	case constants.FORGEOPS_DEPLOYMENT_TYPE_KEY:
+	case constants.ForgeopsDeploymentTypeKey:
 		adminClientId = state.AdminClientId
 		if adminClientId == "" {
 			adminClientId = forgeopsClientId
 		}
 		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentType: end [type=%s]", deploymentType))
 		return deploymentType
-	case constants.CLASSIC_DEPLOYMENT_TYPE_KEY:
+	case constants.ClassicDeploymentTypeKey:
 		frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentType: end [type=%s]", deploymentType))
 		return deploymentType
 	default:
 		// if we are using a service account, we know it's cloud
-		if state.UseBearerTokenForAmApis {
-			frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentType: end [type=%s]", constants.CLOUD_DEPLOYMENT_TYPE_KEY))
-			return constants.CLOUD_DEPLOYMENT_TYPE_KEY
+		if state.getUseBearerTokenForAmApis() {
+			frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.determineDeploymentType: end [type=%s]", constants.CloudDeploymentTypeKey))
+			return constants.CloudDeploymentTypeKey
 		}
 		verifier, _ := randomBytes(32)
 		encodedVerifier := encodeBase64Url(verifier)
@@ -837,12 +771,12 @@ func (frodo Frodo) determineDeploymentType() string {
 		hash.Write([]byte(encodedVerifier))
 		challenge := encodeBase64Url(hash.Sum(nil))
 		challengeMethod := "S256"
-		redirectUri, _ := url.Parse(state.Host)
+		redirectUri, _ := url.Parse(state.getHost())
 		redirectUri.Path = constants.RedirectUrlTemplate
 		bodyFormData := fmt.Sprintf("redirect_uri=%s&scope=%s&response_type=code&client_id=%s&csrf=%s&decision=allow&code_challenge=%s&code_challenge_method=%s", url.QueryEscape(redirectUri.String()), url.QueryEscape(constants.CloudAdminScopes), url.QueryEscape(fidcClientId), url.QueryEscape(cookieValue), url.QueryEscape(challenge), url.QueryEscape(challengeMethod))
-		deploymentType = constants.CLASSIC_DEPLOYMENT_TYPE_KEY
+		deploymentType = constants.ClassicDeploymentTypeKey
 		var data = frodo.authorize(HTTPRequestParams{
-			url:  state.Host,
+			url:  state.getHost(),
 			body: bodyFormData,
 			headers: http.Header{
 				state.CookieName: {state.getCookieValue()},
@@ -859,11 +793,11 @@ func (frodo Frodo) determineDeploymentType() string {
 		resp, _ := client.Do(&data)
 		if resp.StatusCode == 302 && strings.Index(resp.Header.Get("Location"), "code=") > -1 {
 			frodo.VerboseMessage("ForgeRock Identity Cloud deployment detected.")
-			deploymentType = constants.CLOUD_DEPLOYMENT_TYPE_KEY
+			deploymentType = constants.CloudDeploymentTypeKey
 		} else {
 			bodyFormData = fmt.Sprintf("redirect_uri=%s&scope=%s&response_type=code&client_id=%s&csrf=%s&decision=allow&code_challenge=%s&code_challenge_method=%s", url.QueryEscape(redirectUri.String()), url.QueryEscape(constants.ForgeopsAdminScopes), url.QueryEscape(forgeopsClientId), url.QueryEscape(cookieValue), url.QueryEscape(challenge), url.QueryEscape(challengeMethod))
 			var data = frodo.authorize(HTTPRequestParams{
-				url:  state.Host,
+				url:  state.getHost(),
 				body: bodyFormData,
 				headers: http.Header{
 					state.CookieName: {state.getCookieValue()},
@@ -878,7 +812,7 @@ func (frodo Frodo) determineDeploymentType() string {
 					adminClientId = forgeopsClientId
 				}
 				frodo.VerboseMessage("ForgeOps deployment detected.")
-				deploymentType = constants.FORGEOPS_DEPLOYMENT_TYPE_KEY
+				deploymentType = constants.ForgeopsDeploymentTypeKey
 			} else {
 				frodo.DebugMessage("Classic deployment detected.")
 			}
@@ -903,7 +837,7 @@ type ServerVersionInfoType struct {
 
 func (frodo Frodo) getServerVersionInfo() ServerVersionInfoType {
 	state := frodo.State
-	urlString := fmt.Sprintf(constants.ServerInfoUrlTemplate, state.Host, "version")
+	urlString := fmt.Sprintf(constants.ServerInfoUrlTemplate, state.getHost(), "version")
 	var data = frodo.generateAmApi(HTTPRequestParams{
 		resource:        map[string]string{},
 		requestOverride: map[string]string{},
@@ -939,8 +873,8 @@ func (frodo Frodo) getSemanticVersion(versionInfo ServerVersionInfoType) (string
 
 func (frodo Frodo) determineDefaultRealm() {
 	state := frodo.State
-	if state.Realm == "" {
-		state.Realm = constants.DEPLOYMENT_TYPE_REALM_MAP[state.DeploymentType]
+	if state.getRealm() == "" {
+		state.setRealm(constants.DeploymentTypeRealmMap[state.getDeploymentType()])
 	}
 }
 
@@ -964,12 +898,12 @@ type ServiceAccountParams struct {
 
 func (frodo Frodo) getAuthenticatedSubject() string {
 	state := frodo.State
-	var subjectString = fmt.Sprintf("%s (User)", state.Username)
-	if state.UseBearerTokenForAmApis {
+	var subjectString = fmt.Sprintf("%s (User)", state.getUsername())
+	if state.getUseBearerTokenForAmApis() {
 		serviceAccount := frodo.GetServiceAccount(ServiceAccountParams{
-			ServiceAccountId: state.ServiceAccountId,
+			ServiceAccountId: state.getServiceAccountId(),
 		})
-		subjectString = fmt.Sprintf("%s[%s] (Service Account)", serviceAccount.Name, state.ServiceAccountId)
+		subjectString = fmt.Sprintf("%s[%s] (Service Account)", serviceAccount.Name, state.getServiceAccountId())
 	}
 	return subjectString
 }
@@ -1024,13 +958,13 @@ func getRealmPath(realm string) string {
 }
 
 func (frodo Frodo) authorize(params HTTPRequestParams) http.Request {
-	urlString := fmt.Sprintf(constants.AuthorizeUrlTemplate, params.url, frodo.State.getCurrentRealmPath())
+	urlString := fmt.Sprintf(constants.AuthorizeUrlTemplate, params.url, "")
 	params.url = urlString
 	return frodo.generateOauth2Api(params)
 }
 
 func (frodo Frodo) accessToken(params HTTPRequestParams) http.Request {
-	urlString := fmt.Sprintf(constants.AccessTokenUrlTemplate, params.url, frodo.State.getCurrentRealmPath())
+	urlString := fmt.Sprintf(constants.AccessTokenUrlTemplate, params.url, "")
 	params.url = urlString
 	return frodo.generateOauth2Api(params)
 }
@@ -1057,11 +991,11 @@ func (frodo Frodo) generateOauth2Api(params HTTPRequestParams) http.Request {
 	if params.resource["apiVersion"] != "" {
 		req.Header.Set("Accept-API-Version", params.resource["apiVersion"])
 	}
-	if params.authenticate && !state.UseBearerTokenForAmApis && state.CookieName != "" && state.getCookieValue() != "" {
+	if params.authenticate && !state.getUseBearerTokenForAmApis() && state.CookieName != "" && state.getCookieValue() != "" {
 		req.Header.Set(state.CookieName, state.getCookieValue())
 	}
-	if params.authenticate && state.getUseBearerTokenForAmApis && state.BearerToken.AccessToken != "" {
-		req.Header.Set("Authorization:", fmt.Sprintf("Bearer %s", state.BearerToken.AccessToken))
+	if params.authenticate && state.getUseBearerTokenForAmApis() && state.getBearerToken().AccessToken != "" {
+		req.Header.Set("Authorization:", fmt.Sprintf("Bearer %s", state.getBearerToken().AccessToken))
 	}
 	for headerName, headerValue := range params.headers {
 		req.Header.Set(headerName, strings.Join(headerValue, ", "))
@@ -1071,6 +1005,7 @@ func (frodo Frodo) generateOauth2Api(params HTTPRequestParams) http.Request {
 
 type AccessTokenMetaType struct {
 	AccessToken string `json:"access_token"`
+	IdToken     string `json:"id_token"`
 	Scope       string `json:"scope"`
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int    `json:"expires_in"`
@@ -1124,17 +1059,17 @@ func (frodo Frodo) saveSaBearerToken(token AccessTokenMetaType) {
 func (frodo Frodo) getFreshSaBearerToken() AccessTokenMetaType {
 	state := frodo.State
 	frodo.DebugMessage(fmt.Sprintf("AuthenticateOps.getFreshSaBearerToken: start"))
-	saId := state.ServiceAccountId
-	saJwk := state.ServiceAccountJwk
-	payload, _ := frodo.createPayload(saId, state.Host)
+	saId := state.getServiceAccountId()
+	saJwk := state.getServiceAccountJwk()
+	payload, _ := frodo.createPayload(saId, state.getHost())
 	signedJWT := createSignedJwtToken(payload, saJwk)
 	scope := state.ServiceAccountScope
 	if scope == "" {
-		scope = constants.ServiceAccountDefaultScopes
+		scope = constants.ServiceAccountScopes
 	}
 	bodyFormData := fmt.Sprintf("assertion=%s&client_id=service-account&grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&scope=%s", url.QueryEscape(signedJWT), url.QueryEscape(scope))
 	var data = frodo.accessToken(HTTPRequestParams{
-		url:  state.Host,
+		url:  state.getHost(),
 		body: bodyFormData,
 		headers: http.Header{
 			"Content-Type": {"application/x-www-form-urlencoded"},
@@ -1163,7 +1098,7 @@ func (frodo Frodo) getFreshSaBearerToken() AccessTokenMetaType {
 		}
 		bodyFormData := fmt.Sprintf("assertion=%s&client_id=service-account&grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&scope=%s", url.QueryEscape(signedJWT), url.QueryEscape(strings.Join(finalScopes, " ")))
 		var data = frodo.accessToken(HTTPRequestParams{
-			url:  state.Host,
+			url:  state.getHost(),
 			body: bodyFormData,
 			headers: http.Header{
 				"Content-Type": {"application/x-www-form-urlencoded"},
@@ -1264,7 +1199,6 @@ func (frodo Frodo) getManagedObject(params ManagedObjectParams) ServiceAccountTy
 	fieldsParam := "_fields=" + strings.Join(params.Fields, ",")
 
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate+"?%s", frodo.getIdmBaseUrl(), params.Type, params.Id, fieldsParam)
-	fmt.Println(urlString)
 	data := frodo.generateIdmApi(HTTPRequestParams{
 		resource:        map[string]string{},
 		requestOverride: map[string]string{},
@@ -1295,7 +1229,7 @@ func (frodo Frodo) getIdmBaseUrl() string {
 
 func (frodo Frodo) getHostOnlyUrl() string {
 	state := frodo.State
-	parsedUrl, _ := url.Parse(state.Host)
+	parsedUrl, _ := url.Parse(state.getHost())
 	return fmt.Sprintf("%s://%s", parsedUrl.Scheme, parsedUrl.Host)
 }
 
@@ -1388,12 +1322,12 @@ func (frodo Frodo) checkAndHandle2FA(params CheckAndHandle2FAParams) CallbackHan
 					}
 				} else {
 					p := callback.(map[string]interface{})["input"].([]interface{})[0]
-					p.(map[string]interface{})["value"] = state.Username
+					p.(map[string]interface{})["value"] = state.getUsername()
 				}
 			}
 			if callbackType == "PasswordCallback" {
 				p := callback.(map[string]interface{})["input"].([]interface{})[0]
-				p.(map[string]interface{})["value"] = state.Password
+				p.(map[string]interface{})["value"] = state.getPassword()
 			}
 		}
 		frodo.DebugMessage("AuthenticateOps.checkAndHandle2FA: end [need2fa=false]")
@@ -1481,4 +1415,130 @@ func getString(m []string, index int) string {
 func decodeURIComponent(encoded string) string {
 	decoded, _ := url.QueryUnescape(encoded)
 	return decoded
+}
+
+func (frodo Frodo) getUserBearerToken() AccessTokenMetaType {
+	state := frodo.State
+	frodo.DebugMessage("AuthenticateOps.getUserBearerToken: start")
+	token := AccessTokenMetaType{}
+	if state.getUseTokenCache() && (state.hasUserBearerToken()) {
+		token, err := frodo.readUserBearerToken()
+		if err != nil {
+			frodo.DebugMessage("AuthenticateOps.getUserBearerToken: end [failed cache read]")
+		} else {
+			token.from_cache = true
+			frodo.DebugMessage("AuthenticateOps.getUserBearerToken: end [cached]")
+		}
+	}
+	if token == (AccessTokenMetaType{}) {
+		token = frodo.getFreshUserBearerToken()
+		token.from_cache = false
+		frodo.DebugMessage("AuthenticateOps.getUserBearerToken: end [fresh]")
+	}
+	if state.getUseTokenCache() {
+		frodo.saveUserBearerToken()
+	}
+	return token
+
+}
+
+func (frodo Frodo) readUserBearerToken() (AccessTokenMetaType, error) {
+	//todo
+	return AccessTokenMetaType{}, nil
+}
+
+func (frodo Frodo) saveUserBearerToken() bool {
+	//todo
+	frodo.DebugMessage("TokenCacheOps.saveUserBearerToken: start")
+	frodo.DebugMessage("TokenCacheOps.saveUserBearerToken: end")
+	return true
+}
+
+func (frodo Frodo) getFreshUserBearerToken() AccessTokenMetaType {
+	state := frodo.State
+	frodo.DebugMessage("AuthenticateOps.getAccessTokenForUser: start")
+	verifier, _ := randomBytes(32)
+	encodedVerifier := encodeBase64Url(verifier)
+	hash := sha256.New()
+	hash.Write([]byte(encodedVerifier))
+	challenge := encodeBase64Url(hash.Sum(nil))
+	challengeMethod := "S256"
+	redirectUri, _ := url.Parse(state.getHost())
+	redirectUri.Path = state.getAdminClientRedirectUri()
+	authCode := frodo.getAuthCode(redirectUri.String(), challenge, challengeMethod)
+	bodyFormData := url.Values{}
+	if state.getDeploymentType() == constants.CloudDeploymentTypeKey {
+		bodyFormData.Set("redirect_uri", redirectUri.String())
+		bodyFormData.Set("grant_type", "authorization_code")
+		bodyFormData.Set("code", authCode)
+		bodyFormData.Set("code_verifier", encodedVerifier)
+	} else {
+		bodyFormData.Set("client_id", adminClientId)
+		bodyFormData.Set("redirect_uri", redirectUri.String())
+		bodyFormData.Set("grant_type", "authorization_code")
+		bodyFormData.Set("code", authCode)
+		bodyFormData.Set("code_verifier", encodedVerifier)
+	}
+	var data = frodo.accessToken(HTTPRequestParams{
+		url:  state.getHost(),
+		body: bodyFormData.Encode(),
+		headers: http.Header{
+			"Content-Type": {"application/x-www-form-urlencoded"},
+		},
+		method: http.MethodPost,
+	})
+	client := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	resp, _ := client.Do(&data)
+	defer resp.Body.Close()
+	responseData, err := io.ReadAll(resp.Body)
+	if err != nil {
+	}
+	var responseObject AccessTokenMetaType
+	err = json.Unmarshal(responseData, &responseObject)
+	return responseObject
+}
+
+func (frodo Frodo) getAuthCode(redirectUri string, codeChallenge string, codeChallengeMethod string) string {
+	state := frodo.State
+	var scopes string
+	if state.getDeploymentType() == constants.CloudDeploymentTypeKey {
+		scopes = constants.CloudAdminScopes
+	} else {
+		scopes = constants.ForgeopsAdminScopes
+	}
+	bodyFormData := url.Values{}
+	bodyFormData.Set("redirect_uri", redirectUri)
+	bodyFormData.Set("scope", scopes)
+	bodyFormData.Set("response_type", "code")
+	bodyFormData.Set("client_id", adminClientId)
+	bodyFormData.Set("csrf", state.getCookieValue())
+	bodyFormData.Set("decision", "allow")
+	bodyFormData.Set("code_challenge", codeChallenge)
+	bodyFormData.Set("code_challenge_method", codeChallengeMethod)
+	var data = frodo.authorize(HTTPRequestParams{
+		url:  state.getHost(),
+		body: bodyFormData.Encode(),
+		headers: http.Header{
+			state.CookieName: {state.getCookieValue()},
+			"Content-Type":   {"application/x-www-form-urlencoded"},
+		},
+		method: http.MethodPost,
+	})
+	client := &http.Client{
+		Timeout: time.Second * 10,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(&data)
+	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 399 {
+		panic("Incorrect response")
+	}
+	parse, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		panic(err)
+	}
+	return parse.Query().Get("code")
 }
