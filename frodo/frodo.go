@@ -1433,6 +1433,8 @@ func (frodo Frodo) getUserBearerToken() AccessTokenMetaType {
 	}
 	if token == (AccessTokenMetaType{}) {
 		token = frodo.getFreshUserBearerToken()
+		//todo This needs to be enabled for accessing API
+		//state.setUseBearerTokenForAmApis(true)
 		token.from_cache = false
 		frodo.DebugMessage("AuthenticateOps.getUserBearerToken: end [fresh]")
 	}
