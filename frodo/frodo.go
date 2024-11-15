@@ -420,7 +420,7 @@ func (frodo Frodo) generateIdmApi(params HTTPRequestParams) http.Request {
 		"X-ForgeRock-TransactionId": {fmt.Sprintf("frodo-%s", uuid.New().String())},
 		"Content-Type":              {"application/json"},
 	}
-	if state.getUseBearerTokenForAmApis() && state.getBearerToken().AccessToken != "" {
+	if state.getBearerToken() != (AccessTokenMetaType{}) && state.getBearerToken().AccessToken != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", state.getBearerToken().AccessToken))
 	}
 	return req
