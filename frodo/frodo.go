@@ -52,6 +52,7 @@ type ImFrodo interface {
 	CreateServiceAccount(moData ServiceAccountType) ServiceAccountType
 	UpdateServiceAccount(moData ServiceAccountType) ServiceAccountType
 	DeleteServiceAccount(id string) ServiceAccountType
+	PatchServiceAccount(id string, operations []Operation) ServiceAccountType
 }
 
 type PlatformInfo struct {

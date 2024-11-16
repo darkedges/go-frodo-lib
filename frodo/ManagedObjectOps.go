@@ -22,6 +22,12 @@ type CreateManagedObjectParams struct {
 	Data any
 }
 
+type Operation struct {
+	Operation string `json:"operation"`
+	Field     string `json:"field"`
+	Value     string `json:"value"`
+}
+
 func (frodo Frodo) getManagedObject(params GetManagedObjectParams) ServiceAccountType {
 	fieldsParam := "_fields=" + strings.Join(params.Fields, ",")
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate+"?%s", frodo.getIdmBaseUrl(), params.Type, params.Id, fieldsParam)

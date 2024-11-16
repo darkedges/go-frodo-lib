@@ -39,6 +39,13 @@ func (frodo Frodo) UpdateServiceAccount(moData ServiceAccountType) ServiceAccoun
 	return serviceAccount
 }
 
+func (frodo Frodo) PatchServiceAccount(id string, operations []Operation) ServiceAccountType {
+	frodo.DebugMessage("ServiceAccountOps.UpdateServiceAccount: start")
+	serviceAccount := frodo.patchManagedObject(constants.MOType, id, operations, "")
+	frodo.DebugMessage("ServiceAccountOps.UpdateServiceAccount: end")
+	return serviceAccount
+}
+
 func (frodo Frodo) DeleteServiceAccount(id string) ServiceAccountType {
 	frodo.DebugMessage("ServiceAccountOps.DeleteServiceAccount: start")
 	serviceAccount := frodo.deleteManagedObject(constants.MOType, id)
