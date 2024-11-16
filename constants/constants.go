@@ -30,7 +30,14 @@ const ServerInfoUrlTemplate = "%s/json/serverinfo/%s"
 const RedirectUrlTemplate = "/platform/appAuthHelperRedirect.html"
 const AuthorizeUrlTemplate = "%s/oauth2%s/authorize"
 const AccessTokenUrlTemplate = "%s/oauth2%s/access_token"
+
+// ManagedObjects
+const CreateManagedObjectURLTemplate = "%s/managed/%s?_action=create"
 const ManagedObjectByIdURLTemplate = "%s/managed/%s/%s"
+const QueryAllManagedObjectURLTemplate = "%s/managed/%s?_queryFilter=true&_pageSize=%s"
+const QueryManagedObjectURLTemplate = "%s/managed/%s?_queryFilter=%s&_pageSize=%s"
+
+// Environment
 const EnvInfoURLTemplate = "%s/environment/info"
 
 var s = struct {

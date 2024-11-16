@@ -48,7 +48,10 @@ type ImFrodo interface {
 	Login()
 	GetInfo() PlatformInfo
 	state() State
-	GetServiceAccount(ServiceAccountParams) ServiceAccountType
+	ReadServiceAccount(id string) ServiceAccountType
+	CreateServiceAccount(moData ServiceAccountType) ServiceAccountType
+	UpdateServiceAccount(moData ServiceAccountType) ServiceAccountType
+	DeleteServiceAccount(id string) ServiceAccountType
 }
 
 type PlatformInfo struct {
@@ -893,52 +896,28 @@ func (frodo Frodo) getAmVersion() string {
 	return amVersion
 }
 
-type ServiceAccountParams struct {
-	ServiceAccountId string
-}
-
 func (frodo Frodo) getAuthenticatedSubject() string {
 	state := frodo.State
 	var subjectString = fmt.Sprintf("%s (User)", state.getUsername())
 	if state.getUseBearerTokenForAmApis() {
-		serviceAccount := frodo.GetServiceAccount(ServiceAccountParams{
-			ServiceAccountId: state.getServiceAccountId(),
-		})
+		serviceAccount := frodo.ReadServiceAccount(state.getServiceAccountId())
 		subjectString = fmt.Sprintf("%s[%s] (Service Account)", serviceAccount.Name, state.getServiceAccountId())
 	}
 	return subjectString
 }
 
 type ServiceAccountType struct {
-	ID             string   `json:"_id"`
-	Rev            string   `json:"_rev"`
-	AccountStatus  string   `json:"accountStatus"`
-	Name           string   `json:"name"`
-	Description    string   `json:"description"`
-	Scopes         []string `json:"scopes"`
-	Jwks           string   `json:"jwks"`
-	MaxCachingTime string   `json:"maxCachingTime"`
-	MaxIdleTime    string   `json:"maxIdleTime"`
-	MaxSessionTime string   `json:"maxSessionTime"`
-	QuotaLimit     string   `json:"quotaLimit"`
-}
-
-type ManagedObjectParams struct {
-	Type   string
-	Id     string
-	Fields []string
-}
-
-func (frodo Frodo) GetServiceAccount(params ServiceAccountParams) ServiceAccountType {
-	frodo.DebugMessage("ServiceAccountOps.GetServiceAccount: start")
-	serviceAccount := frodo.getManagedObject(ManagedObjectParams{
-		Type:   constants.MOType,
-		Id:     params.ServiceAccountId,
-		Fields: []string{"*"},
-	})
-	frodo.DebugMessage(fmt.Sprintf("%+v", serviceAccount))
-	frodo.DebugMessage("ServiceAccountOps.GetServiceAccount: end")
-	return serviceAccount
+	ID             string   `json:"_id,omitempty"`
+	Rev            string   `json:"_rev,omitempty"`
+	AccountStatus  string   `json:"accountStatus,omitempty"`
+	Name           string   `json:"name,omitempty"`
+	Description    string   `json:"description,omitempty"`
+	Scopes         []string `json:"scopes,omitempty"`
+	Jwks           string   `json:"jwks,omitempty"`
+	MaxCachingTime string   `json:"maxCachingTime,omitempty"`
+	MaxIdleTime    string   `json:"maxIdleTime,omitempty"`
+	MaxSessionTime string   `json:"maxSessionTime,omitempty"`
+	QuotaLimit     string   `json:"quotaLimit,omitempty"`
 }
 
 func getRealmPath(realm string) string {
@@ -1194,30 +1173,6 @@ func (frodo Frodo) createPayload(serviceAccountId string, host string) (jwt.Toke
 	}
 
 	return tok, nil
-}
-
-func (frodo Frodo) getManagedObject(params ManagedObjectParams) ServiceAccountType {
-	fieldsParam := "_fields=" + strings.Join(params.Fields, ",")
-
-	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate+"?%s", frodo.getIdmBaseUrl(), params.Type, params.Id, fieldsParam)
-	data := frodo.generateIdmApi(HTTPRequestParams{
-		resource:        map[string]string{},
-		requestOverride: map[string]string{},
-		url:             urlString,
-		method:          "GET",
-	})
-	client := &http.Client{
-		Timeout: time.Second * 10,
-	}
-	resp, err := client.Do(&data)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	responseData, err := io.ReadAll(resp.Body)
-	var responseObject ServiceAccountType = ServiceAccountType{}
-	err = json.Unmarshal(responseData, &responseObject)
-	return responseObject
 }
 
 func (frodo Frodo) getIdmBaseUrl() string {
