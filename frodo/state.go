@@ -28,6 +28,16 @@ type State struct {
 	AmVersion                     interface{}
 	IDMHost                       string
 	OTPSecret                     string
+	DebugHandler                  func(string)
+	VerboseHandler                func(string)
+}
+
+func (state *State) SetDebugHandler(debug func(string)) {
+	state.DebugHandler = debug
+}
+
+func (state *State) SetVerboseHandler(verbose func(string)) {
+	state.VerboseHandler = verbose
 }
 
 func (state *State) getDeploymentType() string {

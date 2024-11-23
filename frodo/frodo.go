@@ -53,6 +53,8 @@ type ImFrodo interface {
 	UpdateServiceAccount(moData ServiceAccountType) (ServiceAccountType, error)
 	DeleteServiceAccount(id string) (ServiceAccountType, error)
 	PatchServiceAccount(id string, operations []Operation) (ServiceAccountType, error)
+	SetDebugHandler(func(string))
+	SetVerboseHandler(func(string))
 }
 
 type PlatformInfo struct {
@@ -137,27 +139,27 @@ func CreateInstanceWithServiceAccount(p Params) (ImFrodo, error) {
 	return instance, nil
 }
 
-func (state State) DebugHandler() func(string) {
-	return func(message string) {
-		//fmt.Println(message)
-	}
-}
-
-func (state State) VerboseHandler() func(string) {
-	return func(message string) {
-		//fmt.Println(message)
-	}
-}
+//func (state State) DebugHandler() func(string) {
+//	return func(message string) {
+//		//fmt.Println(message)
+//	}
+//}
+//
+//func (state State) VerboseHandler() func(string) {
+//	return func(message string) {
+//		//fmt.Println(message)
+//	}
+//}
 
 func (frodo Frodo) DebugMessage(message string) {
-	handler := frodo.State.DebugHandler()
+	handler := frodo.State.DebugHandler
 	if handler != nil {
 		handler(message)
 	}
 }
 
 func (frodo Frodo) VerboseMessage(message string) {
-	handler := frodo.State.VerboseHandler()
+	handler := frodo.State.VerboseHandler
 	if handler != nil {
 		handler(message)
 	}
@@ -1505,4 +1507,12 @@ func (frodo Frodo) getAuthCode(redirectUri string, codeChallenge string, codeCha
 		panic(err)
 	}
 	return parse.Query().Get("code")
+}
+
+func (frodo Frodo) SetDebugHandler(handler func(string)) {
+	frodo.State.SetDebugHandler(handler)
+}
+
+func (frodo Frodo) SetVerboseHandler(handler func(string)) {
+	frodo.State.SetVerboseHandler(handler)
 }
