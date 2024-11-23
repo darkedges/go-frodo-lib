@@ -70,6 +70,7 @@ func (frodo Frodo) createManagedObject(moType string, moData any) (ServiceAccoun
 	}
 	defer resp.Body.Close()
 	responseData, err := io.ReadAll(resp.Body)
+	frodo.DebugMessage(fmt.Sprintf("reponseData: %s", responseData))
 	var responseObject ServiceAccountType = ServiceAccountType{}
 	err = json.Unmarshal(responseData, &responseObject)
 	return responseObject, nil

@@ -26,7 +26,6 @@ func (frodo Frodo) CreateServiceAccount(moData ServiceAccountType) (ServiceAccou
 
 	jcart, _ := json.MarshalIndent(moData, "", "  ")
 	frodo.DebugMessage(fmt.Sprintf("moData: %s", string(jcart)))
-
 	serviceAccount, err := frodo.createManagedObject(constants.MOType, moData)
 	if err != nil {
 		return ServiceAccountType{}, err
