@@ -5,27 +5,33 @@ import (
 	"github.com/darkedges/go-frodo-lib/constants"
 )
 
-func (frodo Frodo) ReadServiceAccount(serviceAccountId string) ServiceAccountType {
+func (frodo Frodo) ReadServiceAccount(serviceAccountId string) (ServiceAccountType, error) {
 	frodo.DebugMessage("ServiceAccountOps.GetServiceAccount: start")
-	serviceAccount := frodo.getManagedObject(GetManagedObjectParams{
+	serviceAccount, err := frodo.getManagedObject(GetManagedObjectParams{
 		Type:   constants.MOType,
 		Id:     serviceAccountId,
 		Fields: []string{"*"},
 	})
+	if err != nil {
+		return ServiceAccountType{}, err
+	}
 	frodo.DebugMessage(fmt.Sprintf("%+v", serviceAccount))
 	frodo.DebugMessage("ServiceAccountOps.GetServiceAccount: end")
-	return serviceAccount
+	return serviceAccount, nil
 }
 
-func (frodo Frodo) CreateServiceAccount(moData ServiceAccountType) ServiceAccountType {
+func (frodo Frodo) CreateServiceAccount(moData ServiceAccountType) (ServiceAccountType, error) {
 	frodo.DebugMessage("ServiceAccountOps.CreateServiceAccount: start")
-	serviceAccount := frodo.createManagedObject(constants.MOType, moData)
+	serviceAccount, err := frodo.createManagedObject(constants.MOType, moData)
+	if err != nil {
+		return ServiceAccountType{}, err
+	}
 	frodo.DebugMessage(fmt.Sprintf("%+v", serviceAccount))
 	frodo.DebugMessage("ServiceAccountOps.CreateServiceAccount: end")
-	return serviceAccount
+	return serviceAccount, nil
 }
 
-func (frodo Frodo) UpdateServiceAccount(moData ServiceAccountType) ServiceAccountType {
+func (frodo Frodo) UpdateServiceAccount(moData ServiceAccountType) (ServiceAccountType, error) {
 	frodo.DebugMessage("ServiceAccountOps.UpdateServiceAccount: start")
 	id := moData.ID
 	moData.Rev = ""
@@ -34,21 +40,30 @@ func (frodo Frodo) UpdateServiceAccount(moData ServiceAccountType) ServiceAccoun
 	moData.MaxSessionTime = ""
 	moData.QuotaLimit = ""
 	moData.MaxCachingTime = ""
-	serviceAccount := frodo.putManagedObject(constants.MOType, id, moData, false)
+	serviceAccount, err := frodo.putManagedObject(constants.MOType, id, moData, false)
+	if err != nil {
+		return ServiceAccountType{}, err
+	}
 	frodo.DebugMessage("ServiceAccountOps.UpdateServiceAccount: end")
-	return serviceAccount
+	return serviceAccount, nil
 }
 
-func (frodo Frodo) PatchServiceAccount(id string, operations []Operation) ServiceAccountType {
+func (frodo Frodo) PatchServiceAccount(id string, operations []Operation) (ServiceAccountType, error) {
 	frodo.DebugMessage("ServiceAccountOps.UpdateServiceAccount: start")
-	serviceAccount := frodo.patchManagedObject(constants.MOType, id, operations, "")
+	serviceAccount, err := frodo.patchManagedObject(constants.MOType, id, operations, "")
+	if err != nil {
+		return ServiceAccountType{}, err
+	}
 	frodo.DebugMessage("ServiceAccountOps.UpdateServiceAccount: end")
-	return serviceAccount
+	return serviceAccount, nil
 }
 
-func (frodo Frodo) DeleteServiceAccount(id string) ServiceAccountType {
+func (frodo Frodo) DeleteServiceAccount(id string) (ServiceAccountType, error) {
 	frodo.DebugMessage("ServiceAccountOps.DeleteServiceAccount: start")
-	serviceAccount := frodo.deleteManagedObject(constants.MOType, id)
+	serviceAccount, err := frodo.deleteManagedObject(constants.MOType, id)
+	if err != nil {
+		return ServiceAccountType{}, err
+	}
 	frodo.DebugMessage("ServiceAccountOps.DeleteServiceAccount: end")
-	return serviceAccount
+	return serviceAccount, nil
 }

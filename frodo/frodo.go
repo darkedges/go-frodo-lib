@@ -48,11 +48,11 @@ type ImFrodo interface {
 	Login()
 	GetInfo() PlatformInfo
 	state() State
-	ReadServiceAccount(id string) ServiceAccountType
-	CreateServiceAccount(moData ServiceAccountType) ServiceAccountType
-	UpdateServiceAccount(moData ServiceAccountType) ServiceAccountType
-	DeleteServiceAccount(id string) ServiceAccountType
-	PatchServiceAccount(id string, operations []Operation) ServiceAccountType
+	ReadServiceAccount(id string) (ServiceAccountType, error)
+	CreateServiceAccount(moData ServiceAccountType) (ServiceAccountType, error)
+	UpdateServiceAccount(moData ServiceAccountType) (ServiceAccountType, error)
+	DeleteServiceAccount(id string) (ServiceAccountType, error)
+	PatchServiceAccount(id string, operations []Operation) (ServiceAccountType, error)
 }
 
 type PlatformInfo struct {
@@ -901,7 +901,10 @@ func (frodo Frodo) getAuthenticatedSubject() string {
 	state := frodo.State
 	var subjectString = fmt.Sprintf("%s (User)", state.getUsername())
 	if state.getUseBearerTokenForAmApis() {
-		serviceAccount := frodo.ReadServiceAccount(state.getServiceAccountId())
+		serviceAccount, err := frodo.ReadServiceAccount(state.getServiceAccountId())
+		if err != nil {
+			return ""
+		}
 		subjectString = fmt.Sprintf("%s[%s] (Service Account)", serviceAccount.Name, state.getServiceAccountId())
 	}
 	return subjectString

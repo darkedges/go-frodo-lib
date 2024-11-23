@@ -28,7 +28,7 @@ type Operation struct {
 	Value     string `json:"value"`
 }
 
-func (frodo Frodo) getManagedObject(params GetManagedObjectParams) ServiceAccountType {
+func (frodo Frodo) getManagedObject(params GetManagedObjectParams) (ServiceAccountType, error) {
 	fieldsParam := "_fields=" + strings.Join(params.Fields, ",")
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate+"?%s", frodo.getIdmBaseUrl(), params.Type, params.Id, fieldsParam)
 	data := frodo.generateIdmApi(HTTPRequestParams{
@@ -42,16 +42,16 @@ func (frodo Frodo) getManagedObject(params GetManagedObjectParams) ServiceAccoun
 	}
 	resp, err := client.Do(&data)
 	if err != nil {
-		panic(err)
+		return ServiceAccountType{}, err
 	}
 	defer resp.Body.Close()
 	responseData, err := io.ReadAll(resp.Body)
 	var responseObject ServiceAccountType = ServiceAccountType{}
 	err = json.Unmarshal(responseData, &responseObject)
-	return responseObject
+	return responseObject, nil
 }
 
-func (frodo Frodo) createManagedObject(moType string, moData any) ServiceAccountType {
+func (frodo Frodo) createManagedObject(moType string, moData any) (ServiceAccountType, error) {
 	urlString := fmt.Sprintf(constants.CreateManagedObjectURLTemplate, frodo.getIdmBaseUrl(), moType)
 	payload, _ := json.MarshalIndent(moData, "", "  ")
 	data := frodo.generateIdmApi(HTTPRequestParams{
@@ -66,16 +66,16 @@ func (frodo Frodo) createManagedObject(moType string, moData any) ServiceAccount
 	}
 	resp, err := client.Do(&data)
 	if err != nil {
-		panic(err)
+		return ServiceAccountType{}, err
 	}
 	defer resp.Body.Close()
 	responseData, err := io.ReadAll(resp.Body)
 	var responseObject ServiceAccountType = ServiceAccountType{}
 	err = json.Unmarshal(responseData, &responseObject)
-	return responseObject
+	return responseObject, nil
 }
 
-func (frodo Frodo) putManagedObject(moType string, id string, moData any, failIfExists bool) ServiceAccountType {
+func (frodo Frodo) putManagedObject(moType string, id string, moData any, failIfExists bool) (ServiceAccountType, error) {
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate, frodo.getIdmBaseUrl(), moType, id)
 	payload, _ := json.MarshalIndent(moData, "", "  ")
 	headers := http.Header{}
@@ -95,16 +95,16 @@ func (frodo Frodo) putManagedObject(moType string, id string, moData any, failIf
 	}
 	resp, err := client.Do(&data)
 	if err != nil {
-		panic(err)
+		return ServiceAccountType{}, err
 	}
 	defer resp.Body.Close()
 	responseData, err := io.ReadAll(resp.Body)
 	var responseObject = ServiceAccountType{}
 	err = json.Unmarshal(responseData, &responseObject)
-	return responseObject
+	return responseObject, nil
 }
 
-func (frodo Frodo) patchManagedObject(moType string, id string, moData any, rev string) ServiceAccountType {
+func (frodo Frodo) patchManagedObject(moType string, id string, moData any, rev string) (ServiceAccountType, error) {
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate, frodo.getIdmBaseUrl(), moType, id)
 	payload, _ := json.MarshalIndent(moData, "", "  ")
 	headers := http.Header{}
@@ -124,13 +124,13 @@ func (frodo Frodo) patchManagedObject(moType string, id string, moData any, rev 
 	}
 	resp, err := client.Do(&data)
 	if err != nil {
-		panic(err)
+		return ServiceAccountType{}, err
 	}
 	defer resp.Body.Close()
 	responseData, err := io.ReadAll(resp.Body)
 	var responseObject = ServiceAccountType{}
 	err = json.Unmarshal(responseData, &responseObject)
-	return responseObject
+	return responseObject, nil
 }
 
 func (frodo Frodo) queryManagedObjects(moType string, filter string, fields []string, pageSize string, pageCookie string) []ServiceAccountType {
@@ -143,7 +143,7 @@ func (frodo Frodo) queryAllManagedObjectsByType(moType string, fields []string, 
 	return []ServiceAccountType{}
 }
 
-func (frodo Frodo) deleteManagedObject(moType string, id string) ServiceAccountType {
+func (frodo Frodo) deleteManagedObject(moType string, id string) (ServiceAccountType, error) {
 	urlString := fmt.Sprintf(constants.ManagedObjectByIdURLTemplate, frodo.getIdmBaseUrl(), moType, id)
 	data := frodo.generateIdmApi(HTTPRequestParams{
 		resource:        map[string]string{},
@@ -156,11 +156,11 @@ func (frodo Frodo) deleteManagedObject(moType string, id string) ServiceAccountT
 	}
 	resp, err := client.Do(&data)
 	if err != nil {
-		panic(err)
+		return ServiceAccountType{}, err
 	}
 	defer resp.Body.Close()
 	responseData, err := io.ReadAll(resp.Body)
 	var responseObject ServiceAccountType = ServiceAccountType{}
 	err = json.Unmarshal(responseData, &responseObject)
-	return responseObject
+	return responseObject, nil
 }
