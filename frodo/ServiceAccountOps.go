@@ -3,6 +3,7 @@ package frodo
 import (
 	"fmt"
 	"github.com/darkedges/go-frodo-lib/constants"
+	"github.com/goccy/go-json"
 )
 
 func (frodo Frodo) ReadServiceAccount(serviceAccountId string) (ServiceAccountType, error) {
@@ -22,6 +23,10 @@ func (frodo Frodo) ReadServiceAccount(serviceAccountId string) (ServiceAccountTy
 
 func (frodo Frodo) CreateServiceAccount(moData ServiceAccountType) (ServiceAccountType, error) {
 	frodo.DebugMessage("ServiceAccountOps.CreateServiceAccount: start")
+
+	jcart, _ := json.MarshalIndent(moData, "", "  ")
+	frodo.DebugMessage(fmt.Sprintf("moData: %s", string(jcart)))
+
 	serviceAccount, err := frodo.createManagedObject(constants.MOType, moData)
 	if err != nil {
 		return ServiceAccountType{}, err
